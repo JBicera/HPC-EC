@@ -1,0 +1,5 @@
+NAME:funnel_compilation
+BINARY:make
+TYPE:compile
+INPUT:sort
+POINTVAL:5

@@ -1,0 +1,22 @@
+#!/bin/bash
+#SBATCH -J funnel_timing
+#SBATCH --partition ice-gpu,coc-gpu
+#SBATCH -C "intel&core40"
+#SBATCH -N 1 --ntasks-per-node=2
+#SBATCH --exclusive
+#SBATCH --mem=0
+#SBATCH --time=00:10:00
+#SBATCH --error=job.%J.err
+#SBATCH --output=job.%J.out
+
+#Setup Environment
+cd $SLURM_SUBMIT_DIR
+source pace_env.sh
+
+N=8388608
+
+rm metrics.txt 2>/dev/null
+make sort
+python2 ./metrics.py ${N}
+
+exit 0

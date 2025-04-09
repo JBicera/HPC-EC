@@ -1,0 +1,6 @@
+NAME:funnel_public_1
+BINARY:sort
+POINTVAL:5
+TYPE:internal
+INPUT:-c -n 10
+OUTPUT:
