@@ -6,11 +6,14 @@
 #include <stdio.h>
 
 // Recursively perform k-way funnel merge
-void kWayFunnelMerge(keytype* arr, long N, long k, long subSize) 
+void kWayFunnelMerge(keytype* in, keytype* out, long N, long k, long subSize)
 {
-    // Base Case: Nothign left to merge
-    if (k <= 1 || N <= subSize) 
+    // Base Case: Nothign left to merge, copy to out and return
+    if (k <= 1 || N <= subSize) {
+        if (in != out)
+            memcpy(out, in, N * sizeof(keytype));
         return;
+    }
 
     // New size as you merge two subarrays
     long newSubSize = subSize * 2;
@@ -24,36 +27,34 @@ void kWayFunnelMerge(keytype* arr, long N, long k, long subSize)
         long mid = start + subSize;
         long end = ((start + newSubSize) < N) ? (start + newSubSize) : N;
 
-        // If the right half exists, merge
+        // If there is a right subarray to merge with
         if (mid < end) 
         {
-            // Allocate temporary array to hold the result
-            keytype* temp = (keytype*)malloc((end - start) * sizeof(keytype));
             long left = start;
             long right = mid;
-            long idx = 0;
+            long idx = start;
 
-            // Merge elements from both subarrays and put in temp
+            // Standard two-way merge
             while (left < mid && right < end) 
             {
-                if (compare(&arr[left], &arr[right]) <= 0)
-                    temp[idx++] = arr[left++];
+                if (compare(&in[left], &in[right]) <= 0)
+                    out[idx++] = in[left++];
                 else
-                    temp[idx++] = arr[right++];
+                    out[idx++] = in[right++];
             }
-            // Copy the leftover elements
-            while (left < mid) temp[idx++] = arr[left++];
-            while (right < end) temp[idx++] = arr[right++];
-
-            // Copy the sorted temp result back into the original array
-            memcpy(&arr[start], temp, (end - start) * sizeof(keytype));
-
-            free(temp); 
-        }
+            // Copy remaining
+            while (left < mid)
+                out[idx++] = in[left++];
+            while (right < end)
+                out[idx++] = in[right++];
+        } 
+        else
+            // If there is no right subarray, just copy over the left subarray
+            memcpy(&out[start], &in[start], (end - start) * sizeof(keytype));
     }
 
-    // Recursively merge the now larger subarrays 
-    kWayFunnelMerge(arr, N, newK, newSubSize);
+    // Recursively merge thew newK sorted subarrays
+    kWayFunnelMerge(out,in, N, newK, newSubSize); // Have out as new input
 }
 
 // Recursively sort subarrays then perform a k-way funnel merge
@@ -82,6 +83,13 @@ void funnelSort(long N, keytype* A)
         quickSort(length, &A[start]);
     }
     
-    // Merge the sorted subarrays using the min-heap based k-way merger.
-    kWayFunnelMerge(A, N, k, subSize);
+    // Allocate a persistent temporary buffer for merging
+    keytype* temp = (keytype*)malloc(N * sizeof(keytype));
+    memcpy(temp, A, N * sizeof(keytype));
+
+
+    // Call recursive based k-way merger
+    kWayFunnelMerge(temp, A, N, k, subSize);
+
+    free(temp);
 }
