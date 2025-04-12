@@ -53,7 +53,7 @@ void kWayFunnelMerge(keytype* in, keytype* out, long N, long k, long subSize) {
         return;
     }
 
-    long m = 8; // How many sorted subarrays are merged in one step, can be changed
+    long m = 16; // How many sorted subarrays are merged in one step, can be changed
 
     long newSubSize = subSize * m;
     long newK = (k + m - 1) / m;
