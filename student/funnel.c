@@ -153,6 +153,7 @@ void funnelSort(long N, keytype* A)
 
     // Use persistent memory buffer for merging
     keytype* temp = (keytype*)malloc(N * sizeof(keytype));
+    memcpy(temp, A, N * sizeof(keytype));
 
     // Call recursive merge to merge the separate sorted subarrays
     kWayFunnelMerge(temp, A, N, k, subSize);
