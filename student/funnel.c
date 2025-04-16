@@ -7,21 +7,24 @@
 
 
 // Use HeapNode to keep track of smallest value of all subarrays
-typedef struct {
+typedef struct 
+{
     keytype value;
     long subIdx;
     long pos;
 } HeapNode;
 
 // Swap Helper Function
-void swap(HeapNode* x, HeapNode* y) {
+void swap(HeapNode* x, HeapNode* y) 
+{
     HeapNode temp = *x;
     *x = *y;
     *y = temp;
 }
 
 // Heapify Function
-void minHeapify(HeapNode heap[], long heapSize, long i) {
+void minHeapify(HeapNode heap[], long heapSize, long i) 
+{
     long smallest = i;
     long left = 2 * i + 1;
     long right = 2 * i + 2;
@@ -31,20 +34,23 @@ void minHeapify(HeapNode heap[], long heapSize, long i) {
     if (right < heapSize && compare(&heap[right].value, &heap[smallest].value) < 0)
         smallest = right;
     
-    if (smallest != i) {
+    if (smallest != i) 
+    {
         swap(&heap[i], &heap[smallest]);
         minHeapify(heap, heapSize, smallest);
     }
 }
 
 // Build minHeap function
-void buildMinHeap(HeapNode heap[], long heapSize) {
+void buildMinHeap(HeapNode heap[], long heapSize) 
+{
     for (long i = (heapSize - 2) / 2; i >= 0; i--)
         minHeapify(heap, heapSize, i);
 }
 
 // Merges sorted subarrays using a min-heap and recursion
-void kWayFunnelMerge(keytype* in, keytype* out, long N, long k, long subSize) {
+void kWayFunnelMerge(keytype* in, keytype* out, long N, long k, long subSize) 
+{
     // Base Case: Copy input to output and return
     if (k <= 1 || N <= subSize) 
     {
@@ -133,7 +139,8 @@ void funnelSort(long N, keytype* A)
     }
 
     long k = pow(N, 1.0 / 3.0);
-    if (k < 1) k = 1;
+    if (k < 1) 
+        k = 1;
     long subSize = (N + k - 1) / k;
 
     // Individually sort N^(1/3) subarrays
@@ -146,7 +153,6 @@ void funnelSort(long N, keytype* A)
 
     // Use persistent memory buffer for merging
     keytype* temp = (keytype*)malloc(N * sizeof(keytype));
-    memcpy(temp, A, N * sizeof(keytype));
 
     // Call recursive merge to merge the separate sorted subarrays
     kWayFunnelMerge(temp, A, N, k, subSize);
