@@ -5,91 +5,151 @@
 #include <limits.h>
 #include <stdio.h>
 
-// Binary merge: Merges two sorted runs: [start, mid) and [mid, end)
-static inline void binaryMerge(keytype* in, keytype* out, long start, long mid, long end) 
-{
-    long i = start, j = mid, k = start;
-    while (i < mid && j < end) {
-        if (compare(&in[i], &in[j]) <= 0)
-            out[k++] = in[i++];
-        else
-            out[k++] = in[j++];
-    }
-    while (i < mid)
-        out[k++] = in[i++];
-    while (j < end)
-        out[k++] = in[j++];
+
+// Use HeapNode to keep track of smallest value of all subarrays
+typedef struct {
+    keytype value;
+    long subIdx;
+    long pos;
+} HeapNode;
+
+// Swap Helper Function
+void swap(HeapNode* x, HeapNode* y) {
+    HeapNode temp = *x;
+    *x = *y;
+    *y = temp;
 }
 
-static void iterativeBinaryFunnelMerge(keytype* in, keytype* out, long N, long k, long subSize) {
-    keytype* src = in;
-    keytype* dst = out;
+// Heapify Function
+void minHeapify(HeapNode heap[], long heapSize, long i) {
+    long smallest = i;
+    long left = 2 * i + 1;
+    long right = 2 * i + 2;
+    
+    if (left < heapSize && compare(&heap[left].value, &heap[smallest].value) < 0)
+        smallest = left;
+    if (right < heapSize && compare(&heap[right].value, &heap[smallest].value) < 0)
+        smallest = right;
+    
+    if (smallest != i) {
+        swap(&heap[i], &heap[smallest]);
+        minHeapify(heap, heapSize, smallest);
+    }
+}
 
-    long numRuns = k;
-    long runSize = subSize;
+// Build minHeap function
+void buildMinHeap(HeapNode heap[], long heapSize) {
+    for (long i = (heapSize - 2) / 2; i >= 0; i--)
+        minHeapify(heap, heapSize, i);
+}
 
-    while (numRuns > 1) {
-        long newNumRuns = (numRuns + 1) / 2;
+// Merges sorted subarrays using a min-heap and recursion
+void kWayFunnelMerge(keytype* in, keytype* out, long N, long k, long subSize) {
+    // Base Case: Copy input to output and return
+    if (k <= 1 || N <= subSize) 
+    {
+        if (in != out)
+            memcpy(out, in, N * sizeof(keytype));
+        return;
+    }
 
-        for (long i = 0; i < newNumRuns; i++) {
-            long start = i * 2 * runSize;
-            long mid = start + runSize;
-            long end = mid + runSize;
+    long m = 16; // How many sorted subarrays are merged in one step, can be changed
 
-            if (mid > N) mid = N;
-            if (end > N) end = N;
+    long newSubSize = subSize * m;
+    long newK = (k + m - 1) / m;
 
-            binaryMerge(src, dst, start, mid, end);
+    // Build a new heap at each level of recursion for the current group of subarrays
+    for (long i = 0; i < newK; i++) 
+    {
+        long groupStart = i * newSubSize;
+        long groupEnd = (groupStart + newSubSize < N) ? groupStart + newSubSize : N;
+        long groupK = ((i * m + m) <= k) ? m : (k - i * m);
+
+        if (groupK > 0) 
+        {
+            HeapNode* heap = (HeapNode*)malloc(groupK * sizeof(HeapNode));
+            long heapSize = 0;
+
+            // Initialize heap to keep track of first values from each subarray
+            for (long j = 0; j < groupK; j++) 
+            {
+                long subStart = groupStart + j * subSize;
+                if (subStart < groupEnd) 
+                {
+                    heap[heapSize].value = in[subStart];
+                    heap[heapSize].subIdx = j;
+                    heap[heapSize].pos = 0;
+                    heapSize++;
+                }
+            }
+
+            buildMinHeap(heap, heapSize);
+
+            long index = groupStart;
+
+            // Merging loop
+            while (heapSize > 0) 
+            {
+                HeapNode minNode = heap[0]; // Get the smallest value
+                out[index++] = minNode.value; // Put in output array
+
+                long newPos = minNode.pos + 1; // Next index in this subarray
+                long subStart = groupStart + minNode.subIdx * subSize;
+
+                // Check if subarray has more elements
+                if ((subStart + newPos < groupEnd) && (newPos < subSize)) 
+                {
+                    // Update heap root with next value of same subarray
+                    heap[0].value = in[subStart + newPos]; 
+                    heap[0].pos = newPos; // Update position
+                } 
+                // If subarray is done, remove heap node by replacing with last elmeent of heap
+                else 
+                {
+                    heap[0] = heap[heapSize - 1];
+                    heapSize--;
+                }
+
+                // Re-heapify the min-heap after modifying it
+                if(heapSize > 0)
+                    minHeapify(heap, heapSize, 0);
+            }
+
+            free(heap);
         }
-
-        // Swap buffers for next level
-        keytype* temp = src;
-        src = dst;
-        dst = temp;
-
-        numRuns = newNumRuns;
-        runSize *= 2;
     }
-
-    // If the final result is not in A, copy it back
-    if (src != in) {
-        memcpy(in, src, N * sizeof(keytype));
-    }
+    // Call the recursive merge again with bigger subarrays and new k value
+    kWayFunnelMerge(out, in, N, newK, newSubSize);
 }
 
-
-// Funnel sort main function
+// Main function to sort an array using funnel sort
 void funnelSort(long N, keytype* A) 
 {
-    // Base case: For small arrays, use quickSort.
+    // Quicksort if the input is that small
     if (N <= 1000) 
     {
         quickSort(N, A);
         return;
     }
-    
-    // Determine the number of subarrays: N^(1/3)
-    long k = pow(N, 1.0 / 3.0);
-    if (k < 1)
-        k = 1;
 
-    // Compute subarray size (using ceiling division)
+    long k = pow(N, 1.0 / 3.0);
+    if (k < 1) k = 1;
     long subSize = (N + k - 1) / k;
-    
-    // Sort each of the k subarrays individually using quickSort
+
+    // Individually sort N^(1/3) subarrays
     for (long i = 0; i < k; i++) 
     {
         long start = i * subSize;
         long length = (start + subSize < N) ? subSize : (N - start);
         quickSort(length, &A[start]);
     }
-    
-    // Allocate temp buffer for merging
-    keytype* temp = (keytype*)malloc(N * sizeof(keytype));
-    
-    // Recursively merge the k sorted runs using the binary funnel merge.
-    iterativeBinaryFunnelMerge(A, temp, N, k, subSize);
 
-    
+    // Use persistent memory buffer for merging
+    keytype* temp = (keytype*)malloc(N * sizeof(keytype));
+    memcpy(temp, A, N * sizeof(keytype));
+
+    // Call recursive merge to merge the separate sorted subarrays
+    kWayFunnelMerge(temp, A, N, k, subSize);
+
     free(temp);
 }
