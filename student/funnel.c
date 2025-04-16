@@ -6,7 +6,7 @@
 #include <stdio.h>
 
 // Binary merge: Merges two sorted runs: [start, mid) and [mid, end)
-void binaryMerge(keytype* in, keytype* out, long start, long mid, long end) 
+static inline void binaryMerge(keytype* in, keytype* out, long start, long mid, long end) 
 {
     long i = start, j = mid, k = start;
     while (i < mid && j < end) {
@@ -81,10 +81,11 @@ void funnelSort(long N, keytype* A)
     
     // Allocate temp buffer for merging
     keytype* temp = (keytype*)malloc(N * sizeof(keytype));
-    memcpy(temp, A, N * sizeof(keytype));
     
     // Recursively merge the k sorted runs using the binary funnel merge.
     binaryFunnelMerge(temp, A, N, k, subSize);
+
+    memcpy(A,temp , N * sizeof(keytype));
     
     free(temp);
 }
