@@ -21,37 +21,42 @@ static inline void binaryMerge(keytype* in, keytype* out, long start, long mid, 
         out[k++] = in[j++];
 }
 
-// Recursive binary merge function (binary funnel merge)
-void binaryFunnelMerge(keytype* in, keytype* out, long N, long k, long subSize) 
-{
-    // Base case: If there is only one sorted run, copy if necessary and return.
-    if (k <= 1) 
-    {
-        if (in != out)
-            memcpy(out, in, N * sizeof(keytype));
-        return;
+static void iterativeBinaryFunnelMerge(keytype* in, keytype* out, long N, long k, long subSize) {
+    keytype* src = in;
+    keytype* dst = out;
+
+    long numRuns = k;
+    long runSize = subSize;
+
+    while (numRuns > 1) {
+        long newNumRuns = (numRuns + 1) / 2;
+
+        for (long i = 0; i < newNumRuns; i++) {
+            long start = i * 2 * runSize;
+            long mid = start + runSize;
+            long end = mid + runSize;
+
+            if (mid > N) mid = N;
+            if (end > N) end = N;
+
+            binaryMerge(src, dst, start, mid, end);
+        }
+
+        // Swap buffers for next level
+        keytype* temp = src;
+        src = dst;
+        dst = temp;
+
+        numRuns = newNumRuns;
+        runSize *= 2;
     }
 
-    long newK = (k + 1) / 2; // newK: number of runs after pairwise merging
-
-    // For each pair of runs, merge them
-    for (long i = 0; i < newK; i++) 
-    {
-        long start = i * 2 * subSize;
-        long mid = start + subSize;
-        long end = mid + subSize;
-        if (mid > N) 
-            mid = N;
-        if (end > N)
-            end = N;
-        // Merge the pair [start, mid) and [mid, end) into out
-        binaryMerge(in, out, start, mid, end);
-        // If a run has no partner (k is odd), binaryMerge simply copies it
+    // If the final result is not in A, copy it back
+    if (src != in) {
+        memcpy(in, src, N * sizeof(keytype));
     }
-    
-    // Recursion with new subarrays, swapping in and out
-    binaryFunnelMerge(out, in, N, newK, subSize * 2); // Pass new K and subSize
 }
+
 
 // Funnel sort main function
 void funnelSort(long N, keytype* A) 
@@ -83,9 +88,8 @@ void funnelSort(long N, keytype* A)
     keytype* temp = (keytype*)malloc(N * sizeof(keytype));
     
     // Recursively merge the k sorted runs using the binary funnel merge.
-    binaryFunnelMerge(temp, A, N, k, subSize);
+    iterativeBinaryFunnelMerge(A, temp, N, k, subSize);
 
-    memcpy(A,temp , N * sizeof(keytype));
     
     free(temp);
 }
